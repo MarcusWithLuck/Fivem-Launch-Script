@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; background: transparent; overflow: hidden; }
+
+  /* Tiny boost readout, bottom centre. Only visible while boost is built or held. */
+  #gauge {
+    position: fixed; left: 50%; bottom: 5.5vh; transform: translateX(-50%);
+    width: 96px; text-align: center;
+    font-family: 'Segoe UI', Arial, sans-serif; color: rgba(255,255,255,.88);
+    text-shadow: 0 1px 2px rgba(0,0,0,.7);
+    opacity: 0; transition: opacity .45s ease;
+  }
+  #gauge.on { opacity: 1; transition: opacity .15s ease; }
+
+  #psi { font-size: 18px; font-weight: 600; letter-spacing: .5px; font-variant-numeric: tabular-nums; }
+  #psi small { font-size: 9px; font-weight: 400; opacity: .6; margin-left: 2px; letter-spacing: 1px; }
+
+  .line { height: 2px; margin-top: 3px; background: rgba(255,255,255,.12); border-radius: 1px; overflow: hidden; }
+  .fill { height: 100%; width: 0; background: rgba(255,255,255,.85); transition: width .08s linear, background-color .3s; }
+  #heat { margin-top: 2px; opacity: 0; transition: opacity .3s; }
+  #heat .fill { background: #f0a030; }
+  #heat.hot .fill { background: #e8452c; }
+</style>
+</head>
+<body>
+<div id="gauge">
+  <div id="psi">0<small>PSI</small></div>
+  <div class="line" id="boost"><div class="fill"></div></div>
+  <div class="line" id="heat"><div class="fill"></div></div>
+</div>
+
+<script>
+  const gauge = document.getElementById('gauge');
+  const psi   = document.getElementById('psi');
+  const bFill = document.querySelector('#boost .fill');
+  const heat  = document.getElementById('heat');
+  const hFill = document.querySelector('#heat .fill');
+
+  window.addEventListener('message', (e) => {
+    const d = e.data;
+    if (!d) return;
+
+    if (d.action === 'pop' && d.file) {
+      // New Audio per pop so rapid pops overlap; random pitch so it never sounds looped
+      const a = new Audio('sounds/' + d.file);
+      a.volume = Math.max(0, Math.min(1, d.volume ?? 0.5));
+      a.playbackRate = 0.85 + Math.random() * 0.35;
+      a.play().catch(() => {});
+      return;
+    }
+
+    if (d.action === 'hud') {
+      gauge.classList.toggle('on', !!d.show);
+      if (!d.show) return;
+      psi.firstChild.nodeValue = d.psi;
+      bFill.style.width = (d.boost * 100) + '%';
+      // heat line only appears once the turbo is getting warm
+      heat.style.opacity = d.heat > 0.5 ? 1 : 0;
+      heat.classList.toggle('hot', d.heat >= 0.9);
+      hFill.style.width = (d.heat * 100) + '%';
+    }
+  });
+</script>
+</body>
+</html>
